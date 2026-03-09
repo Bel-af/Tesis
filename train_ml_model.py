@@ -17,7 +17,6 @@ COMO USAR:
 
 import sys
 import os
-import pickle
 import numpy as np
 from datetime import datetime
 
@@ -33,7 +32,7 @@ from postgres import Postgres
 
 # Importar sklearn
 try:
-    from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+    from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split, cross_val_score
     from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
     import joblib
@@ -330,7 +329,7 @@ def main():
     print("="*70)
     
     # Cargar datos
-    X, y, metadata = cargar_datos_entrenamiento()
+    X, y, _ = cargar_datos_entrenamiento()
     
     if X is None:
         print("\n❌ No se pudieron cargar datos de entrenamiento")

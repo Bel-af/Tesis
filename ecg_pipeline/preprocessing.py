@@ -5,7 +5,7 @@ preprocessing.py - Lectura y preprocesamiento de senales ECG EasyG
 
 Responsabilidades:
 - Parsear metadatos de archivos CSV EasyG
-- Convertir datos enteros a uV usando LSB
+- Convertir datos numericos a uV usando LSB
 - Normalizar amplitud para procesamiento
 - Aplicar filtros (paso-alto para remover drift DC)
 - Validar duracion minima del ECG
@@ -87,7 +87,7 @@ def parse_easyg_csv(filepath):
             raise ECGParsingError("No se pudo decodificar archivo con encodings: {}".format(encodings))
         
         for line in file_content:
-            line = line.strip()
+            line = line.replace(u'\xa0', ' ').strip()
             
             # Procesar líneas de metadatos (comienzan con %)
             if line.startswith('%'):
@@ -97,9 +97,9 @@ def parse_easyg_csv(filepath):
                     metadata['num_samples'] = int(match.group(1))
                 
                 # LSB en µV
-                match = re.search(r'LSB\s*\[uV\]\s*=\s*([\d.]+)', line)
+                match = re.search(r'LSB\s*\[uV\]\s*=\s*([\d.,]+)', line)
                 if match:
-                    metadata['lsb_uv'] = float(match.group(1))
+                    metadata['lsb_uv'] = float(match.group(1).replace(',', '.'))
                 
                 # Frecuencia de muestreo
                 match = re.search(r'Frecuencia de muestreo efectiva\s*\[Hz\]\s*=\s*(\d+)', line)
@@ -138,12 +138,16 @@ def parse_easyg_csv(filepath):
         reader = csv.reader(data_lines)
         raw_data = []
         for row_idx, row in enumerate(reader):
-            # Convertir strings a enteros, ignorar blancos
+            # Compatibilidad con exportaciones que usan ';' como separador
+            if len(row) == 1 and ';' in row[0]:
+                row = row[0].split(';')
+
+            # Convertir strings a float, ignorar blancos
             row_values = []
             for val in row:
-                val_str = val.strip()
+                val_str = val.replace(u'\xa0', ' ').strip()
                 if val_str:
-                    row_values.append(int(val_str))
+                    row_values.append(float(val_str.replace(',', '.')))
             
             if row_values:
                 raw_data.append(row_values)
@@ -151,12 +155,12 @@ def parse_easyg_csv(filepath):
         if not raw_data:
             raise NoValidSignalError("No se encontraron datos de senal en CSV")
         
-        raw_array = np.array(raw_data, dtype=np.int32)
+        raw_array = np.array(raw_data, dtype=np.float32)
         
     except ValueError as e:
         raise ECGParsingError("Error parsing valores numericos: {}".format(str(e)))
     
-    # Convertir de enteros a µV usando LSB
+    # Convertir de valores numericos a µV usando LSB
     lsb = metadata['lsb_uv']
     ecg_uv = raw_array.astype(np.float32) * lsb
     

@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, redirect
 from flask_restful import Api, MethodNotAllowed, NotFound
 from flask_cors import CORS
-from util.common import domain, port, prefix, build_swagger_config_json
+from util.common import prefix, build_swagger_config_json, swagger_config_endpoint
 from resources.swaggerConfig import SwaggerConfig
 from resources.tesisResources import Diagnosticar, Pacientes,Paciente, HistorialClinico
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -21,7 +21,7 @@ api = Api(app, prefix=prefix, catch_all_404s=True)
 build_swagger_config_json()
 swaggerui_blueprint = get_swaggerui_blueprint(
     prefix,
-    f'http://{domain}:{port}{prefix}/swagger-config',
+    swagger_config_endpoint,
     config={
         'app_name': "Tesis API",
         "layout": "BaseLayout",

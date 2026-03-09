@@ -82,8 +82,15 @@ def predict_dns_ml(features_dict):
     if model_metadata is None:
         # Fallback al modelo basado en reglas
         logger.info("Usando modelo basado en reglas (ML no disponible)")
-        from model import predict_dns as predict_rules
-        return predict_rules(features_dict)
+        from model import predict_dns_probability as predict_rules
+        dns_probability_pct, confidence_score_pct = predict_rules(features_dict)
+        return {
+            'dns_probability_pct': round(float(dns_probability_pct), 1),
+            'confidence_score': round(float(confidence_score_pct), 1),
+            'model_type': 'rules',
+            'explanation': 'Predicción basada en reglas fisiológicas',
+            'feature_importance': []
+        }
     
     # Usar modelo ML
     model = model_metadata['model']
@@ -123,8 +130,15 @@ def predict_dns_ml(features_dict):
         
     except Exception as e:
         logger.error(f"Error en predicción ML: {e}, fallback a reglas")
-        from model import predict_dns as predict_rules
-        return predict_rules(features_dict)
+        from model import predict_dns_probability as predict_rules
+        dns_probability_pct, confidence_score_pct = predict_rules(features_dict)
+        return {
+            'dns_probability_pct': round(float(dns_probability_pct), 1),
+            'confidence_score': round(float(confidence_score_pct), 1),
+            'model_type': 'rules',
+            'explanation': 'Predicción basada en reglas fisiológicas',
+            'feature_importance': []
+        }
 
 
 def _get_top_features(model_metadata, X):
@@ -162,7 +176,12 @@ def predict_dns(features_dict):
     Wrapper para mantener compatibilidad con código existente.
     Intenta usar ML, fallback a reglas si no existe.
     """
-    return predict_dns_ml(features_dict)
+    result = predict_dns_ml(features_dict)
+    if isinstance(result, dict):
+        dns_probability_pct = float(result.get('dns_probability_pct', 0))
+        confidence_score = float(result.get('confidence_score_pct', result.get('confidence_score', 0)))
+        return dns_probability_pct, confidence_score
+    return result
 
 
 if __name__ == '__main__':

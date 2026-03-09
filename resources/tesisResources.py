@@ -44,6 +44,11 @@ class Diagnosticar(Resource):
             
             # Obtener interpretacion clinica basica
             interpretacion = processor.get_clinical_interpretation(resultado_ecg)
+
+            # Si el procesamiento fallo, retornar error real sin guardar en BD
+            if 'error' in resultado_ecg or interpretacion.get('estado') == 'error':
+                print(f"✗ Error en diagnostico ECG: {interpretacion.get('recomendaciones', [])}")
+                return interpretacion
             
             # Si hay historico, agregar analisis comparativo
             if ultimo_examen and 'error' not in resultado_ecg:
@@ -61,12 +66,29 @@ class Diagnosticar(Resource):
             # Guardar en base de datos
             db_result = db.guardarDiagnosticoDNS(id_paciente, nombre, edad, raza, resultado_ecg)
             
-            # Agregar IDs a respuesta
+            # Agregar IDs y estado de persistencia
             if db_result:
-                interpretacion['id_examen'] = db_result['id_examen']
-                interpretacion['id_paciente'] = db_result['id_paciente']
+                if db_result.get('id_paciente') is not None:
+                    interpretacion['id_paciente'] = db_result.get('id_paciente')
+                if db_result.get('id_examen') is not None:
+                    interpretacion['id_examen'] = db_result.get('id_examen')
+                    interpretacion['db_save_ok'] = True
+                else:
+                    interpretacion['db_save_ok'] = False
+                    save_error = db_result.get('save_error')
+                    if save_error:
+                        interpretacion['recomendaciones'].append(
+                            "Resultado calculado, pero no se pudo guardar examen en BD: {}".format(save_error)
+                        )
+                        print(f"✗ Error guardando examen en BD: {save_error}")
+            else:
+                interpretacion['db_save_ok'] = False
+                interpretacion['recomendaciones'].append(
+                    "Resultado calculado, pero no se pudo confirmar guardado en BD"
+                )
             
-            print(f"✓ Diagnostico DNS: {interpretacion['estado']} ({interpretacion['dns_probability_pct']:.1f}%)")
+            dns_probability_pct = interpretacion.get('dns_probability_pct', 0)
+            print(f"✓ Diagnostico DNS: {interpretacion.get('estado', 'N/A')} ({dns_probability_pct:.1f}%)")
             
             return interpretacion
             

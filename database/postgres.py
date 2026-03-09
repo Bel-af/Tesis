@@ -5,27 +5,34 @@ from dotenv import load_dotenv
 class Postgres:
     def __init__(self):
         # Cargar .env desde la raíz del proyecto (no depender del cwd)
-        # override=True para evitar usar variables del entorno equivocadas
+        # override=False para permitir variables definidas por el servidor/contenedor
         env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-        load_dotenv(dotenv_path=env_path, override=True)
-        self.psql_user = os.getenv("PGSQL_USER")
-        self.psql_password = os.getenv("PGSQL_PASSWORD")
-        self.psql_db = os.getenv("PGSQL_DB")
-        self.psql_host = os.getenv("PGSQL_HOST")    
-        self.psql_port = os.getenv("PGSQL_PORT")
+        load_dotenv(dotenv_path=env_path, override=False)
+        self.psql_user = os.getenv("PGSQL_USER", "tesis")
+        self.psql_password = os.getenv("PGSQL_PASSWORD", "tesis")
+        self.psql_db = os.getenv("PGSQL_DB", "tesis")
+        self.psql_host = os.getenv("PGSQL_HOST", "localhost")
+        self.psql_port = os.getenv("PGSQL_PORT", "5432")
+        self.psql_connect_timeout = int(os.getenv("PGSQL_CONNECT_TIMEOUT", "8"))
+        self.psql_sslmode = os.getenv("PGSQL_SSLMODE", "")
         print(f"Postgres config: user={self.psql_user}, db={self.psql_db}, host={self.psql_host}, port={self.psql_port}")
         self.connect()
         
     def connect(self):
         print("Connecting to PostgreSQL database")
         try:
-            self.connection = psycopg2.connect(
+            connection_kwargs = dict(
                 user=self.psql_user,
                 password=self.psql_password,
                 host=self.psql_host,
                 port=self.psql_port,
-                database=self.psql_db
+                database=self.psql_db,
+                connect_timeout=self.psql_connect_timeout
             )
+            if self.psql_sslmode:
+                connection_kwargs["sslmode"] = self.psql_sslmode
+
+            self.connection = psycopg2.connect(**connection_kwargs)
             print("Connection successful")
         except Exception as e:
             print(f"Error connecting to PostgreSQL database: {e}")
@@ -185,25 +192,37 @@ class Postgres:
             dict con {id_examen, id_paciente, dns_probability_pct}
         """
         
-        if self.connection is None:
+        if self.connection is None or self.connection.closed:
             self.connect()
         
         if self.connection is None:
             print("Error: No hay conexion a la base de datos")
             return None
+
+        # Normalizar edad para evitar errores de tipo
+        edad_val = None
+        if edad is not None and str(edad).strip() != '':
+            try:
+                edad_val = int(edad)
+            except (TypeError, ValueError):
+                print(f"Advertencia: edad invalida '{edad}', se guardara como NULL")
+                edad_val = None
         
         try:
-            cursor = self.connection.cursor()
-            
-            # Si no existe paciente, crearlo
+            # Si no existe paciente, crearlo y confirmar en una transaccion separada
             if id_paciente is None:
+                cursor = self.connection.cursor()
                 cursor.execute(
                     "INSERT INTO pacientes (nombre, edad, raza) VALUES (%s, %s, %s) RETURNING id_paciente",
-                    (nombre, edad, raza)
+                    (nombre, edad_val, raza)
                 )
                 id_paciente = cursor.fetchone()[0]
+                cursor.close()
+                self.connection.commit()
                 print(f"Paciente creado con ID: {id_paciente}")
-            
+
+            cursor = self.connection.cursor()
+
             # Crear registro en metadatos_examen
             cursor.execute("""
                 INSERT INTO metadatos_examen 
@@ -246,7 +265,12 @@ class Postgres:
         except Exception as e:
             print(f"Error guardando diagnostico DNS: {e}")
             self.connection.rollback()
-            return None
+            return {
+                'id_examen': None,
+                'id_paciente': id_paciente,
+                'dns_probability_pct': resultado_dns.get('dns_probability_pct', 0),
+                'save_error': str(e)
+            }
     
     def obtenerHistorialDNS(self, id_paciente):
         """

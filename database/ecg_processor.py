@@ -119,7 +119,14 @@ class ECGProcessor:
             features = extract_features(rr_analysis, valid_rr_fraction, duration_s)
             
             # Paso 5: Prediccion DNS
-            dns_probability_pct, confidence_score_pct = predict_dns_probability(features)
+            prediction = predict_dns_probability(features)
+            if isinstance(prediction, dict):
+                dns_probability_pct = float(prediction.get('dns_probability_pct', 0))
+                confidence_score_pct = float(
+                    prediction.get('confidence_score_pct', prediction.get('confidence_score', 0))
+                )
+            else:
+                dns_probability_pct, confidence_score_pct = prediction
             
             logger.info("Prediccion DNS: {:.1f}% (confianza: {:.1f}%)".format(
                 dns_probability_pct, confidence_score_pct
