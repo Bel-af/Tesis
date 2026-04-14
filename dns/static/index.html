@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis ECG - DNS Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            font-size: 1.4em;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="file"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 14px 30px;
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-analyze {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-analyze:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-clear {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-section h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .result-value {
+            color: #333;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-error {
+            background: #fee;
+            border-left: 4px solid #f44;
+            color: #c00;
+            display: block;
+        }
+
+        .alert-success {
+            background: #efe;
+            border-left: 4px solid #4f4;
+            color: #040;
+            display: block;
+        }
+
+        .alert-warning {
+            background: #ffe;
+            border-left: 4px solid #ff0;
+            color: #664;
+            display: block;
+        }
+
+        .state-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .state-dns {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .state-normal {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .state-warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .metrics-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .metrics-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .metrics-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .recommendations {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .recommendations h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .recommendations ul {
+            margin-left: 20px;
+            color: #333;
+        }
+
+        .recommendations li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 20px;
+            border: 2px dashed #667eea;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .file-input-label:hover {
+            background: #eef0ff;
+            border-color: #764ba2;
+        }
+
+        .file-input-label.drag-over {
+            background: #eef0ff;
+            border-color: #764ba2;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .error-text {
+            color: #c62828;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Análisis ECG</h1>
+            <p>Sistema de Detección de Depresión del Segmento ST (DNS)</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                📋 Información del Paciente
+            </div>
+            <div class="card-body">
+                <div id="alertContainer"></div>
+
+                <form id="ecgForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombre">Nombre del Paciente *</label>
+                            <input type="text" id="nombre" name="nombre" placeholder="Ej: Firulais" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edad">Edad (años)</label>
+                            <input type="number" id="edad" name="edad" placeholder="Ej: 5" min="0" max="50">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="raza">Raza del Paciente *</label>
+                        <input type="text" id="raza" name="raza" placeholder="Ej: Labrador" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ecgFile">Archivo ECG (CSV) *</label>
+                        <label for="ecgFile" class="file-input-label" id="fileLabel">
+                            <div>📁 Haz clic aquí o arrastra tu archivo ECG</div>
+                            <div id="fileName" class="file-name"></div>
+                        </label>
+                        <input type="file" id="ecgFile" name="file" accept=".csv" required>
+                        <div id="fileError" class="error-text"></div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn-analyze" id="analyzeBtn">
+                            🔍 Analizar ECG
+                        </button>
+                        <button type="reset" class="btn-clear" id="clearBtn">
+                            🗑️ Limpiar
+                        </button>
+                    </div>
+                </form>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analizando ECG... Por favor espera</p>
+                </div>
+
+                <div class="results" id="results">
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_PREFIX = '/dns';
+        const form = document.getElementById('ecgForm');
+        const fileInput = document.getElementById('ecgFile');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileName = document.getElementById('fileName');
+        const fileError = document.getElementById('fileError');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const resultsContent = document.getElementById('resultsContent');
+        const alertContainer = document.getElementById('alertContainer');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        // Drag and drop
+        fileLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileLabel.classList.add('drag-over');
+        });
+
+        fileLabel.addEventListener('dragleave', () => {
+            fileLabel.classList.remove('drag-over');
+        });
+
+        fileLabel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileLabel.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFileName();
+            }
+        });
+
+        fileInput.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                fileName.textContent = `✓ ${fileInput.files[0].name}`;
+                fileError.textContent = '';
+            } else {
+                fileName.textContent = '';
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearAlert();
+
+            const nombre = document.getElementById('nombre').value.trim();
+            const edad = document.getElementById('edad').value;
+            const raza = document.getElementById('raza').value.trim();
+            const file = fileInput.files[0];
+
+            if (!nombre || !raza || !file) {
+                showAlert('Por favor completa todos los campos requeridos', 'error');
+                return;
+            }
+
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            analyzeBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('nombre', nombre);
+            formData.append('edad', edad);
+            formData.append('raza', raza);
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_PREFIX}/diagnosticar`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showAlert(
+                        data.recomendaciones?.join(', ') || 'Error en el análisis',
+                        'error'
+                    );
+                    return;
+                }
+
+                displayResults(data);
+            } catch (error) {
+                showAlert(`Error de conexión: ${error.message}`, 'error');
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            const estado = data.estado || 'DESCONOCIDO';
+            const confidence = data.confidence_score_pct || 0;
+            const dnsProb = data.dns_probability_pct || 0;
+            const metricas = data.metricas || {};
+            const recomendaciones = data.recomendaciones || [];
+            const pdfPath = data.pdf_report_path;
+
+            let stateClass = 'state-normal';
+            let stateEmoji = '✅';
+
+            if (estado === 'DNS') {
+                stateClass = 'state-dns';
+                stateEmoji = '⚠️';
+            } else if (estado === 'WARNING') {
+                stateClass = 'state-warning';
+                stateEmoji = '⚡';
+            }
+
+            let html = `
+                <div class="result-section">
+                    <h3>📊 Resultado del Diagnóstico</h3>
+                    <div class="result-item">
+                        <span class="result-label">Estado:</span>
+                        <span class="result-value">
+                            <span class="state-badge ${stateClass}">${stateEmoji} ${estado}</span>
+                        </span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Probabilidad DNS:</span>
+                        <span class="result-value">${dnsProb.toFixed(2)}%</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Confianza:</span>
+                        <span class="result-value">${confidence.toFixed(2)}%</span>
+                    </div>
+                </div>
+            `;
+
+            if (Object.keys(metricas).length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>📈 Métricas ECG</h3>
+                        <table class="metrics-table">
+                            <tr>
+                                <th>Métrica</th>
+                                <th>Valor</th>
+                            </tr>
+                `;
+
+                for (const [key, value] of Object.entries(metricas)) {
+                    if (value !== null && value !== undefined) {
+                        let displayValue = value;
+                        if (typeof value === 'number') {
+                            displayValue = value.toFixed(2);
+                        }
+                        const keyDisplay = key.replace(/_/g, ' ').toUpperCase();
+                        html += `
+                            <tr>
+                                <td>${keyDisplay}</td>
+                                <td>${displayValue}</td>
+                            </tr>
+                        `;
+                    }
+                }
+
+                html += '</table></div>';
+            }
+
+            if (recomendaciones.length > 0) {
+                html += `
+                    <div class="recommendations">
+                        <h4>💡 Recomendaciones</h4>
+                        <ul>
+                            ${recomendaciones.map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (pdfPath) {
+                const filename = pdfPath.split('/').pop() || pdfPath;
+                html += `
+                    <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 6px;">
+                        <p style="margin-bottom: 15px; color: #2e7d32; font-weight: 600;">
+                            ✓ PDF generado correctamente
+                        </p>
+                        <button type="button" class="btn-download" onclick="downloadPDF('${filename}')">
+                            📥 Descargar Informe PDF
+                        </button>
+                    </div>
+                `;
+            }
+
+            resultsContent.innerHTML = html;
+            results.style.display = 'block';
+
+            if (estado === 'DNS') {
+                showAlert('⚠️ Se detectó depresión del segmento ST. Requiere seguimiento veterinario.', 'warning');
+            } else if (estado === 'NORMAL') {
+                showAlert('✓ ECG normal. Sin hallazgos significativos.', 'success');
+            }
+        }
+
+        function downloadPDF(filename) {
+            const url = `${API_PREFIX}/descargar-pdf/${encodeURIComponent(filename)}`;
+            window.location.href = url;
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+        }
+
+        function clearAlert() {
+            alertContainer.innerHTML = '';
+        }
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            results.style.display = 'none';
+            clearAlert();
+        });
+    </script>
+</body>
+</html>

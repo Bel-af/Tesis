@@ -1,0 +1,41 @@
+METODOLOGÍA DEL ALGORITMO (4 párrafos)
+
+El algoritmo implementa un flujo completo para analizar ECGs veterinarios cortos, comenzando por el parsing del CSV EasyG con metadatos embebidos. Se extraen parámetros críticos como frecuencia de muestreo, número de muestras, LSB y derivaciones, y la señal se convierte de enteros a microvoltios. A partir de la matriz de derivaciones, se selecciona automáticamente la derivación con mejor relación señal/ruido usando un criterio combinado de amplitud, varianza y prioridad clínica, lo que permite robustez cuando una derivación específica es ruidosa o está invertida.
+
+Luego, la señal seleccionada se normaliza y se aplica un filtrado paso‑alto para reducir el drift de línea base. El módulo de detección de picos R utiliza umbral adaptativo sobre ventanas móviles y validación de intervalos mínimos para evitar duplicados, con la mejora de intentar la señal normal y la señal invertida y elegir la que entregue más picos válidos. Esto mejora la detección en trazas con polaridad invertida o artefactos que invierten la morfología del QRS.
+
+Con los picos R detectados, se calculan los intervalos RR en segundos, descartando outliers fisiológicamente imposibles (RR < 0.3s o RR > 10s). Se estima la calidad de la señal en función del porcentaje de RR válidos y se normalizan los conteos de pausas según la duración real del ECG (pausas por minuto). Esta etapa produce métricas como RR máximo, número de pausas >3s y >4s, y estadísticas de variabilidad.
+
+Finalmente, se construye un vector de características clínicas (HR media, SDNN, RMSSD, RR máximo, pausas por minuto, duración, calidad) y se pasa a un modelo de decisión basado en reglas fisiológicas calibradas para DNS. El resultado es una probabilidad continua (0–100%) con interpretación clínica y recomendaciones, además de un puntaje de confianza y banderas de calidad que contextualizan diagnósticos en señales muy cortas o ruidosas.
+
+RESULTADOS Y CONCLUSIONES DEL ALGORITMO (4 párrafos)
+
+Hasta el momento, el algoritmo rule‑based ha demostrado alta consistencia en los casos de prueba verificados clínicamente, entregando probabilidades DNS alineadas con la interpretación veterinaria. En los casos patológicos confirmados, la combinación de pausas RR prolongadas y alta variabilidad incrementa la probabilidad de DNS, mientras que en pacientes sanos los valores se mantienen bajos o en zona inconclusa cuando la señal es corta o ruidosa.
+
+Un resultado clave es la mejora en la robustez de detección tras incorporar selección automática de derivación e inversión de señal. En señales problemáticas, el conteo de picos R aumentó significativamente y se corrigieron estimaciones irreales de HR, mostrando que el sistema es sensible a la calidad del ECG y que necesita mecanismos para mitigar artefactos. Esta mejora reduce falsos positivos extremos asociados a mala detección.
+
+La calidad de señal se mantiene como factor crítico: cuando SDNN es extremadamente alta o el porcentaje de RR válidos es bajo, la probabilidad DNS puede elevarse por artefactos. Por ello, el sistema informa métricas de calidad y recomienda cautela clínica en ECGs cortos o ruidosos. Esta conclusión refuerza la necesidad de reportar confianza junto con la probabilidad diagnóstica.
+
+Como conclusión parcial, el enfoque basado en reglas ofrece un baseline confiable mientras se construye un dataset etiquetado suficiente para transición a ML. El algoritmo ya está listo para producción clínica asistida, con advertencias claras y resultados interpretables. La fase siguiente será entrenar un modelo supervisado cuando existan suficientes casos DNS confirmados para generalizar mejor.
+
+METODOLOGÍA DE SERVICIOS Y SWAGGER (4–5 párrafos)
+
+La API se implementó con Flask y Flask‑RESTful, estructurando los servicios en recursos independientes para diagnóstico, pacientes y otros endpoints. Se estableció un flujo claro: el endpoint de diagnóstico recibe el archivo ECG, ejecuta el pipeline completo y retorna una respuesta clínica estructurada, mientras que los endpoints de pacientes consultan y actualizan información en la base de datos PostgreSQL.
+
+La capa de persistencia se encapsuló en una clase Postgres con métodos especializados para recuperar pacientes, obtener exámenes previos y almacenar resultados. Se garantizó que las operaciones CRUD funcionen con conexiones activas, con reconexión automática cuando es necesario. Además, se añadieron métodos para análisis comparativo, permitiendo observar tendencias entre exámenes nuevos y previos.
+
+Swagger UI se integró para documentar y probar los endpoints en tiempo real. Se configuró el archivo de swagger con un servidor dinámico que lee el host, puerto y prefijo desde el .env, asegurando que la documentación apunte siempre al backend correcto. Esto reduce errores de configuración al cambiar ambientes o puertos.
+
+Se estandarizaron las rutas y respuestas JSON, de modo que cada endpoint devuelve estructuras consistentes. Para evitar problemas con rutas, se aceptaron variantes con y sin slash en endpoints críticos (por ejemplo /pacientes). Esto mejora la experiencia de pruebas en Swagger y evita falsos negativos por errores de URL.
+
+La metodología también incluyó pruebas directas de los endpoints desde la consola (Invoke‑RestMethod) para verificar que la API realmente consulta la base de datos y no devuelve datos estáticos. Esta práctica ayudó a detectar procesos duplicados escuchando en el mismo puerto y a asegurar que Swagger interactúe con la instancia correcta del servidor.
+
+RESULTADOS Y CONCLUSIONES DE SERVICIOS Y SWAGGER (4 párrafos)
+
+Los servicios quedaron operativos y conectados a la base de datos real, confirmando consultas correctas de pacientes y diagnósticos. Se resolvieron incidencias de configuración del .env y de procesos duplicados en el puerto 5000, lo que eliminó respuestas inconsistentes provenientes de instancias antiguas del servidor.
+
+Swagger demostró ser una herramienta efectiva para pruebas rápidas y validación de endpoints. La documentación interactiva permitió verificar respuestas HTTP 200 y 404 según la existencia del paciente, además de facilitar la visualización de payloads para PUT y DELETE. Esto redujo tiempos de depuración y clarificó el comportamiento esperado de cada servicio.
+
+El módulo de pacientes ahora realiza operaciones CRUD completas sobre la base de datos, garantizando consistencia y respuesta inmediata en la interfaz. El endpoint GET por ID dejó de devolver datos estáticos y se conectó directamente a PostgreSQL, lo que valida la integración real del backend con la BD clínica.
+
+Como conclusión parcial, la arquitectura de servicios es estable y escalable. La combinación de Flask‑RESTful con Swagger permite mantener la documentación sincronizada con la implementación, mientras que la capa de datos asegura que el sistema se mantenga coherente con la base clínica. Esto proporciona una base sólida para integrar futuras funcionalidades, como modelos ML, nuevos informes y validaciones automatizadas.
