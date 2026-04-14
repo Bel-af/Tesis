@@ -1,0 +1,143 @@
+{
+  "info": {
+    "_postman_id": "e2e52c45-5ef6-4d3d-8eb7-7f2c77ea8d65",
+    "name": "Tesis API Local - Pacientes y Diagnostico",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Coleccion local para probar actualizacion de pacientes y carga de ECG sin servicios publicos."
+  },
+  "item": [
+    {
+      "name": "Pacientes",
+      "item": [
+        {
+          "name": "GET Paciente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/pacientes/{{paciente_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{paciente_id}}"
+              ]
+            },
+            "description": "Consulta un paciente por ID para validar datos antes o despues de actualizar."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Actualizar paciente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Mocca\",\n  \"edad\": 5,\n  \"raza\": \"French Bulldog\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/pacientes/{{paciente_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{paciente_id}}"
+              ]
+            },
+            "description": "Actualiza los campos del paciente. El id va en la URL, no en el JSON."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Lista de pacientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/pacientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": "Lista todos los pacientes registrados."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Diagnostico DNS",
+      "item": [
+        {
+          "name": "POST Diagnosticar ECG",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "C:\\\\ruta\\\\archivo_ecg.csv"
+                },
+                {
+                  "key": "nombre",
+                  "value": "Mocca",
+                  "type": "text"
+                },
+                {
+                  "key": "edad",
+                  "value": "5",
+                  "type": "text"
+                },
+                {
+                  "key": "raza",
+                  "value": "French Bulldog",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/diagnosticar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "diagnosticar"
+              ]
+            },
+            "description": "Sube CSV ECG + datos del paciente en form-data (no JSON)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "paciente_id",
+      "value": "1"
+    }
+  ]
+}

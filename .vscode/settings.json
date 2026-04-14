@@ -1,0 +1,10 @@
+{
+  "python.analysis.extraPaths": [
+    "./ecg_pipeline",
+    "./database"
+  ],
+  "python.autoComplete.extraPaths": [
+    "./ecg_pipeline",
+    "./database"
+  ]
+}

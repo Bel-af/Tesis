@@ -1,0 +1,249 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DNS API",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000"
+    },
+    {
+      "url": "http://localhost:5000"
+    }
+  ],
+  "tags": [
+    {
+      "name": "DNS",
+      "description": "Servicios para diagnostico de DNS en mascotas"
+    }
+  ],
+  "paths": {
+    "/diagnosticar": {
+      "post": {
+        "tags": [
+          "diagnostico"
+        ],
+        "summary": "Hace el diagnostico de DNS basado en los parametros de entrada",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "example": "Mocca"
+                  },
+                  "raza": {
+                    "type": "string",
+                    "example": "French Bulldog"
+                  },
+                  "edad": {
+                    "type": "integer",
+                    "example": 5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Diagn\u00c3\u00b3stico realizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "estado": {
+                      "type": "string"
+                    },
+                    "recomendaciones": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pacientes": {
+      "get": {
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "Retorna lista de todos los pacientes",
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Paciente"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pacientes/{id_paciente}": {
+      "get": {
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "Retorna la informacion de un paciente especifico",
+        "parameters": [
+          {
+            "name": "id_paciente",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Paciente"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "Actualiza un paciente existente",
+        "parameters": [
+          {
+            "name": "id_paciente",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Id del paciente a actualizar"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "SQL"
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Actualizacion exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Paciente no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "Elimina un paciente por su ID",
+        "parameters": [
+          {
+            "name": "id_paciente",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Id del paciente a eliminar"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Eliminado exitosamente"
+          },
+          "404": {
+            "description": "Paciente no encontrado"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Paciente": {
+        "type": "object",
+        "properties": {
+          "id_paciente": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Mocca"
+          },
+          "edad": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5
+          },
+          "raza": {
+            "type": "string",
+            "example": "French Bulldog"
+          },
+          "genero": {
+            "type": "string",
+            "example": "Hembra"
+          }
+        }
+      }
+    }
+  }
+}
